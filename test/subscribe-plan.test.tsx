@@ -25,7 +25,7 @@ const wallet = vi.hoisted(() => ({
   signXdr: vi.fn(),
 }));
 
-const apiMock = vi.hoisted(() => ({ plans: vi.fn() }));
+const apiMock = vi.hoisted(() => ({ plans: vi.fn(), planStats: vi.fn() }));
 const chainMock = vi.hoisted(() => ({ chainPlans: vi.fn() }));
 const payflowMock = vi.hoisted(() => ({ subscribe: vi.fn() }));
 
@@ -38,7 +38,7 @@ vi.mock("next/link", () => ({
     children,
     ...rest
   }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: unknown }) => (
-    <a href={typeof href === "string" ? href : ""} {...rest}>
+    <a href={typeof href === "string" ? href : "/"} {...rest}>
       {children}
     </a>
   ),

@@ -4,11 +4,21 @@ import {
   formatReceiptDate,
   loadReceipt,
   parseReceiptParams,
+  receiptShareUrl,
 } from "@/lib/receipt";
 import type { ApiCharge, ApiMandate } from "@/lib/api";
 import { XLM } from "@/lib/format";
 
 describe("receipt pure functions", () => {
+  it("builds a share URL from the existing receipt route without leaking other URL state", () => {
+    expect(
+      receiptShareUrl(
+        "https://payflow.example/receipt/?old=secret#section",
+        { txHash: "tx hash", mandateId: 7 },
+      ),
+    ).toBe("https://payflow.example/receipt/?tx=tx+hash&mandate=7");
+  });
+
   describe("parseReceiptParams", () => {
     it("parses valid tx and mandate parameters", () => {
       const result = parseReceiptParams({
@@ -138,37 +148,38 @@ describe("receipt pure functions", () => {
   });
 });
 
+// vi.hoisted and vi.mock must sit at module top level (they are hoisted).
+const apiMock = vi.hoisted(() => ({
+  charges: vi.fn(),
+  mandate: vi.fn(),
+}));
+
+const payflowMock = vi.hoisted(() => ({
+  getMandate: vi.fn(),
+}));
+
+const serverMock = vi.hoisted(() => ({
+  getTransaction: vi.fn(),
+}));
+
+vi.mock("@/lib/api", () => ({
+  api: apiMock,
+}));
+
+vi.mock("@/lib/payflow", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/payflow")>();
+  return {
+    ...actual,
+    payflow: payflowMock,
+    server: serverMock,
+  };
+});
+
+vi.mock("@/lib/token", () => ({
+  loadTokenMeta: vi.fn().mockResolvedValue({ symbol: "XLM", decimals: 7 }),
+}));
+
 describe("loadReceipt integration", () => {
-  const apiMock = vi.hoisted(() => ({
-    charges: vi.fn(),
-    mandate: vi.fn(),
-  }));
-
-  const payflowMock = vi.hoisted(() => ({
-    getMandate: vi.fn(),
-  }));
-
-  const serverMock = vi.hoisted(() => ({
-    getTransaction: vi.fn(),
-  }));
-
-  vi.mock("@/lib/api", () => ({
-    api: apiMock,
-  }));
-
-  vi.mock("@/lib/payflow", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("@/lib/payflow")>();
-    return {
-      ...actual,
-      payflow: payflowMock,
-      server: serverMock,
-    };
-  });
-
-  vi.mock("@/lib/token", () => ({
-    loadTokenMeta: vi.fn().mockResolvedValue({ symbol: "XLM", decimals: 7 }),
-  }));
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
